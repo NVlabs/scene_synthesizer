@@ -35,5 +35,10 @@ import_heading_localfolder = "Local Folder"
 line_length = 100
 
 [tool.pytest.ini_options]
+# for more details on configuration, see
+# https://github.com/pytest-dev/pytest-cov/tree/4732d50f2322a6e0ea480a6c400fbc96f78283bb/examples/src-layout
 norecursedirs = [".git", ".venv", "deprecated", "dist"]
 python_files = ["*_test.py"]
+testpaths = ["tests"]
+addopts = "-n auto --cov-config=.coveragerc --cov=scene_synthesizer --cov-report html"
+

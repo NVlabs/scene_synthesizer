@@ -4,7 +4,7 @@
 
 From the root directory of the repo, run the following:
 ```
-python -m pytest -n auto tests/
+python -m pytest
 ```
 
 ## Generate Documentation

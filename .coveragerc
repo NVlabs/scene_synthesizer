@@ -1,0 +1,16 @@
+[paths]
+source =
+   src
+   */site-packages
+
+[run]
+branch = true
+parallel = true
+source =
+    src/scene_synthesizer
+    test
+
+[report]
+show_missing = true
+precision = 1
+
