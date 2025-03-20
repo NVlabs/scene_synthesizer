@@ -714,7 +714,7 @@ def import_primitive(stage, scene_path=None):
         primitive_data["radius"] = UsdGeom.Sphere(prim).GetRadiusAttr().Get() * meters_per_unit
 
         if prim.HasProperty("xformOp:scale"):
-            primitive_data["radius"] = prim.GetProperty("xformOp:scale").Get()[0]
+            primitive_data["radius"] *= prim.GetProperty("xformOp:scale").Get()[0]
     elif primitive_data["type"] == "Cylinder":
         primitive_data["radius"] = UsdGeom.Cylinder(prim).GetRadiusAttr().Get() * meters_per_unit
         primitive_data["height"] = UsdGeom.Cylinder(prim).GetHeightAttr().Get() * meters_per_unit
