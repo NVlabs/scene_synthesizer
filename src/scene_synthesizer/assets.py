@@ -1157,6 +1157,8 @@ class USDAsset(Asset):
             # Child of root path can be added immediately
             if parent_path.pathString != "/":
                 for x, y in joints:
+                    if joints[(x, y)] == "reversed":
+                        continue
                     if y == xform_path:
                         # since they could be connected via a joint it, we will first check whether the other body is part of the scene
                         log.debug(f"Found relevant joint constraint: {x} <-> {y}")
