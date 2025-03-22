@@ -8,7 +8,8 @@ import trimesh.transformations as tra
 
 # Local Folder
 from . import procedural_assets, utils
-from .scene import BoxAsset, Scene
+from .scene import Scene
+from .assets import BoxAsset, LPrismAsset
 
 
 def _permute_main_kitchen_assets(rng, fridge, oven, sink_cabinet):
@@ -570,6 +571,7 @@ def kitchen_l_shaped(
         **counter_height (float, optional): Height of counters.
         **counter_depth (float, optinal): Depth of counters.
         **counter_thickness (float, optional): Thickness of counters.
+        **corner_padding (float, optional): Additional spacing where two furniture fronts meet in a corner.
         **wall_cabinet_z (float, optional): Z-coordinate of bottom of wall cabinets above ground.
         **wall_cabinet_height (float, optional): Height of cabinets hanging on the wall.
         **handle_shape_args (dict, optional): Dictionary of parameters defining the handle shape.
@@ -667,7 +669,9 @@ def kitchen_l_shaped(
 
     # create corner of L-shaped layout
     corner_idx = rng.integers(2, 4)
-    corner = BoxAsset(extents=[counter_depth, counter_depth, counter_height_without_top])
+    corner_padding = kwargs.get('corner_padding', 0.0)
+    corner = LPrismAsset(name="corner", extents=[counter_depth + corner_padding, counter_depth + corner_padding, counter_height_without_top], recess=corner_padding)
+    
     order_of_assets.insert(corner_idx, corner)
 
     s = Scene(seed=rng)
@@ -776,7 +780,7 @@ def kitchen_l_shaped(
         connect_obj_anchor=("center", "top", "bottom"),
     )
     s.add_object(
-        BoxAsset(extents=[corner.get_extents()[0], counter_depth, counter_thickness]),
+        LPrismAsset(extents=[corner.get_extents()[0], corner.get_extents()[1], counter_thickness], recess=corner_padding),
         "countertop_corner",
         connect_parent_id=str(corner),
         connect_parent_anchor=("center", "top", "top"),
@@ -800,6 +804,7 @@ def kitchen_u_shaped(
         **counter_height (float, optional): Height of counters.
         **counter_depth (float, optinal): Depth of counters.
         **counter_thickness (float, optional): Thickness of counters.
+        **corner_padding (float, optional): Additional spacing where two furniture fronts meet in a corner.
         **wall_cabinet_z (float, optional): Z-coordinate of bottom of wall cabinets above ground.
         **wall_cabinet_height (float, optional): Height of cabinets hanging on the wall.
         **handle_shape_args (dict, optional): Dictionary of parameters defining the handle shape.
@@ -902,8 +907,10 @@ def kitchen_u_shaped(
     )
 
     # add two box corners between all assets
-    corner_1 = BoxAsset(extents=[counter_depth, counter_depth, counter_height_without_top])
-    corner_2 = BoxAsset(extents=[counter_depth, counter_depth, counter_height_without_top])
+    corner_padding = kwargs.get('corner_padding', 0.0)
+    corner_1 = LPrismAsset(name="corner", extents=[counter_depth + corner_padding, counter_depth + corner_padding, counter_height_without_top], recess=corner_padding)
+    corner_2 = LPrismAsset(name="corner", extents=[counter_depth + corner_padding, counter_depth + corner_padding, counter_height_without_top], recess=corner_padding)
+
     order_of_assets.insert(2, corner_1)
     order_of_assets.insert(1, corner_2)
 
@@ -923,7 +930,7 @@ def kitchen_u_shaped(
     s = Scene(seed=rng)
     last_obj_id = s.add_object(order_of_assets[0])
     for asset in order_of_assets[1:]:
-        if "box" in last_obj_id:
+        if "corner" in last_obj_id:
             # create 90 degree corner
             last_obj_id = s.add_object(
                 asset=asset,
@@ -938,7 +945,7 @@ def kitchen_u_shaped(
                 connect_parent_id=last_obj_id,
                 **utils.right_and_aligned_back_bottom(),
             )
-
+    
     # add range hood above range
     s.add_object(
         range_hood,
@@ -970,7 +977,7 @@ def kitchen_u_shaped(
         )
 
     # add wall cabinets above corners
-    for asset, obj_id in zip([corner_1, corner_2], ["box", "box_0"]):
+    for asset, obj_id in zip([corner_1, corner_2], ["corner", "corner_0"]):
         wall_cabinet = procedural_assets.WallCabinetAsset.random(
             seed=rng,
             width=asset.get_extents()[0] / 2.0,
@@ -1050,16 +1057,16 @@ def kitchen_u_shaped(
         connect_obj_anchor=("center", "top", "bottom"),
     )
     s.add_object(
-        BoxAsset(extents=[corner_1.get_extents()[0], counter_depth, counter_thickness]),
+        LPrismAsset(extents=[corner_1.get_extents()[0], corner_1.get_extents()[1], counter_thickness], recess=corner_padding),
         "countertop_corner_1",
-        connect_parent_id="box",
+        connect_parent_id="corner",
         connect_parent_anchor=("center", "top", "top"),
         connect_obj_anchor=("center", "top", "bottom"),
     )
     s.add_object(
-        BoxAsset(extents=[corner_2.get_extents()[0], counter_depth, counter_thickness]),
+        LPrismAsset(extents=[corner_2.get_extents()[0], corner_2.get_extents()[1], counter_thickness], recess=corner_padding),
         "countertop_corner_2",
-        connect_parent_id="box_0",
+        connect_parent_id="corner_0",
         connect_parent_anchor=("center", "top", "top"),
         connect_obj_anchor=("center", "top", "bottom"),
     )
@@ -1081,6 +1088,7 @@ def kitchen_peninsula(
         **counter_height (float, optional): Height of counters.
         **counter_depth (float, optinal): Depth of counters.
         **counter_thickness (float, optional): Thickness of counters.
+        **corner_padding (float, optional): Additional spacing where two furniture fronts meet in a corner.
         **exit_width (float, optional): Width of the exit.
         **wall_cabinet_z (float, optional): Z-coordinate of bottom of wall cabinets above ground.
         **wall_cabinet_height (float, optional): Height of cabinets hanging on the wall.
@@ -1127,11 +1135,14 @@ def kitchen_peninsula(
     base_cabinet_args = kwargs.get("base_cabinet_args", {})
     base_cabinet_1_args = kwargs.get("base_cabinet_1_args", {})
     base_cabinet_2_args = kwargs.get("base_cabinet_2_args", {})
+
+    corner_padding = kwargs.get('corner_padding', 0.0)
     s = kitchen_u_shaped(
         seed=rng,
         counter_height=counter_height,
         counter_depth=counter_depth,
         counter_thickness=counter_thickness,
+        corner_padding=corner_padding,
         wall_cabinet_z=wall_cabinet_z,
         wall_cabinet_height=wall_cabinet_height,
         handle_shape_args=handle_shape_args,
@@ -1168,7 +1179,7 @@ def kitchen_peninsula(
         **base_cabinet_3_args,
     )
     # add corner
-    corner = BoxAsset(extents=[counter_depth, counter_depth, counter_height_without_top])
+    corner = LPrismAsset(name="corner", extents=[counter_depth + corner_padding, counter_depth + corner_padding, counter_height_without_top], recess=corner_padding)
     corner_beginning = False
     if "refrigerator" in last_obj_added:
         # connect to the beginning
@@ -1212,7 +1223,7 @@ def kitchen_peninsula(
         translation=(0, counter_overhang, 0.0),
     )
     s.add_object(
-        BoxAsset(extents=[corner.get_extents()[0] + counter_overhang, counter_depth, counter_thickness]),
+        LPrismAsset(extents=[corner.get_extents()[0] + counter_overhang, corner.get_extents()[1], counter_thickness], recess=corner_padding),
         "countertop_corner_3",
         connect_parent_id="corner_3",
         connect_parent_anchor=("center", "top", "top"),
@@ -1237,6 +1248,7 @@ def kitchen_island(
         **counter_height (float, optional): Height of counters.
         **counter_depth (float, optinal): Depth of counters.
         **counter_thickness (float, optional): Thickness of counters.
+        **corner_padding (float, optional): Additional spacing where two furniture fronts meet in a corner.
         **wall_cabinet_z (float, optional): Z-coordinate of bottom of wall cabinets above ground.
         **wall_cabinet_height (float, optional): Height of cabinets hanging on the wall.
         **handle_shape_args (dict, optional): Dictionary of parameters defining the handle shape.
@@ -1256,6 +1268,8 @@ def kitchen_island(
     counter_height = kwargs.get("counter_height", rng.uniform(0.7, 0.8))
     counter_depth = kwargs.get("counter_depth", rng.uniform(0.7, 0.8))
     counter_thickness = kwargs.get("counter_thickness", rng.uniform(0.03, 0.05))
+
+    corner_padding = kwargs.get('corner_padding', 0.0)
 
     wall_cabinet_z = kwargs.get("wall_cabinet_z", rng.uniform(1.25, 1.35))
     wall_cabinet_height = kwargs.get("wall_cabinet_height", rng.uniform(0.7, 0.8))
@@ -1279,6 +1293,7 @@ def kitchen_island(
         counter_height=counter_height,
         counter_depth=counter_depth,
         counter_thickness=counter_thickness,
+        corner_padding=corner_padding,
         wall_cabinet_z=wall_cabinet_z,
         wall_cabinet_height=wall_cabinet_height,
         handle_shape_args=handle_shape_args,

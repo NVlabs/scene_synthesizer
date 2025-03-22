@@ -10,6 +10,7 @@ from .assets import (
     BoxAsset,
     BoxMeshAsset,
     BoxWithHoleAsset,
+    LPrismAsset,
     SphereAsset,
     CylinderAsset,
     CapsuleAsset,

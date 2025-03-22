@@ -190,7 +190,9 @@ def export_usd(
     def map_scene_path(path):
         if path in list(scene.metadata["object_nodes"].keys()):
             _, object_link_roots, _, _ = scene_object_links[path]
+            log.debug(f"Map {path} to {object_link_roots[0][0]}. Chosen among: {object_link_roots}")
             return object_link_roots[0][0]
+        log.debug(f"Map {path} to itself.")
         return path
 
     # add links
@@ -496,7 +498,7 @@ def export_usd(
             fixed_joint_partitions.append(child_path)
         else:
             log.warning(f"Unknown joint type, won't convert to USD: {joint_info['type']}")
-
+    
     # go through object graph
     cnt = 0
     for object_name in scene.get_object_names():
@@ -537,6 +539,8 @@ def export_usd(
                 link_offset = scene.get_transform(root_link_of_object, frame_from=object_name)
             else:
                 link_offset = np.eye(4)
+
+            # Add node one collection node if link only contains geometries
 
             # Sort nodes to ensure reproducibility / same ordering within USD file
             for object_node in sorted(object_link.nodes):
@@ -587,10 +591,20 @@ def export_usd(
                     scene_path = scenegraph_to_usd_primpath[object_node]
 
                     log.debug(f"Adding geometry to USD stage: {scene_path}   (original: {object_node})")
+                    
+                    scene_path_extension = ""
+                    if len(object_link.nodes) == 1 and scene.is_articulated(object_name):
+                        usd_export.add_xform(
+                            stage=current_stage,
+                            scene_path=scene_path,
+                            transform=transform,
+                        )
+                        transform = np.eye(4)
+                        scene_path_extension = '/' +scene_path.split("/")[-1]
 
                     add_geometry_node(
                         stage=current_stage,
-                        scene_path=scene_path,
+                        scene_path=scene_path + scene_path_extension,
                         g=g,
                         g_vis=g_vis,
                         i=cnt,
@@ -730,9 +744,28 @@ def export_usd(
                     mass_api=True,
                 )
 
+        def map_to_link_root(path, object_links, object_link_roots):
+            link_index = ([1 if path in l.nodes else 0 for l in object_links]).index(1)
+            link_root = object_link_roots[link_index][0]
+            return link_root
+        
         for object_joint_indices in object_joints:
             parent_node, child_node = object_joints[object_joint_indices][0]
             joint_info = object_joints[object_joint_indices][1][EDGE_KEY_METADATA]["joint"]
+
+            # TODO: clean up
+            parent_partition = parent_node
+            child_partition = child_node
+            log.debug(f"parent_node = {parent_node}, child_node = {child_node}")
+
+            # parent_partition = map_scene_path(parent_partition)
+            # child_partition = map_scene_path(child_partition)
+            parent_partition = map_to_link_root(parent_partition, object_links=object_links, object_link_roots=object_link_roots)
+            child_partition = map_to_link_root(child_partition, object_links=object_links, object_link_roots=object_link_roots)
+            log.debug(f"parent_partition = {parent_partition}, child_partition = {child_partition}")
+
+            parent_node = parent_partition
+            child_node = child_partition
 
             body_0_transform = scene._scene.graph.get(frame_to=child_node, frame_from=parent_node)[0]
             body_1_transform = np.eye(4)
@@ -741,14 +774,6 @@ def export_usd(
                 # and subsequent links (to account for the convention that the first link has identity transform)
                 link_offset = scene.get_transform(root_link_of_object, frame_from=object_name)
                 body_0_transform = link_offset @ body_0_transform
-
-            parent_partition = parent_node
-            child_partition = child_node
-            log.debug(f"parent_node = {parent_node}, child_node = {child_node}")
-
-            parent_partition = map_scene_path(parent_partition)
-            child_partition = map_scene_path(child_partition)
-            log.debug(f"parent_partition = {parent_partition}, child_partition = {child_partition}")
 
             parent_path = (
                 "/world"

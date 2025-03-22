@@ -216,6 +216,8 @@ class Asset(object):
         """
         if hasattr(self, "_fname") and len(self._fname) > 0:
             return os.path.basename(self._fname)
+        if hasattr(self, "_name") and len(self._name) > 0:
+            return self._name
         return utils.snake_case("".join(type(self).__name__.split("Asset")))
 
     def show(self, use_collision_geometry=False, layers=None):
@@ -727,6 +729,9 @@ class MeshAsset(Asset):
         self._fname = fname
         self._origin = np.eye(4)
         self._attributes = kwargs
+
+        if 'name' in kwargs:
+            self._name = kwargs['name']
 
         self._stable_poses = None
 
@@ -1853,6 +1858,9 @@ class TrimeshAsset(MeshAsset):
         self._origin = np.eye(4)
         self._attributes = kwargs
 
+        if 'name' in kwargs:
+            self._name = kwargs['name']
+
         self._model = mesh.scene()
 
 
@@ -1923,6 +1931,9 @@ class TrimeshSceneAsset(Asset):
         self._origin = np.eye(4)
         self._attributes = kwargs
 
+        if 'name' in kwargs:
+            self._name = kwargs['name']
+
         self._model = scene
 
     def _as_trimesh_scene(self, namespace="object", use_collision_geometry=True):
@@ -1967,6 +1978,19 @@ class TrimeshSceneAsset(Asset):
 
         return result
 
+
+class LPrismAsset(TrimeshSceneAsset):
+    def __init__(self, extents, recess, **kwargs):
+        if recess == 0.:
+            scene = trimesh.Scene([
+                trimesh.primitives.Box(extents=extents)
+            ])
+        else:
+            box_0 = trimesh.primitives.Box(extents=[extents[0], extents[1] - recess, extents[2]], transform=tra.translation_matrix((0, recess/2.0, 0)))
+            box_1 = trimesh.primitives.Box(extents=[extents[0] - recess, recess, extents[2]], transform=tra.translation_matrix([+recess/2.0, -(extents[1] - recess)/2.0, 0.0]))
+            scene = trimesh.Scene([box_0, box_1])
+        
+        super().__init__(scene=scene, **kwargs)
 
 class BoxWithHoleAsset(TrimeshSceneAsset):
     def __init__(

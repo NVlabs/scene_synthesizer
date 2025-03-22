@@ -29,7 +29,7 @@ from . import utils
 from .assets import Asset, BoxAsset, BoxMeshAsset, BoxWithHoleAsset, TrimeshAsset, TrimeshSceneAsset
 from .exchange import export
 from .utils import log
-from .constants import EDGE_KEY_METADATA
+from .constants import EDGE_KEY_METADATA, DEFAULT_JOINT_LIMIT_LOWER, DEFAULT_JOINT_LIMIT_UPPER
 
 try:
     # Third Party
@@ -1882,7 +1882,9 @@ class Scene(object):
         Returns:
             bool: True if object/scene is articulated.
         """
-        return len(self.get_joint_names(obj_id=obj_id)) > 0
+        if obj_id is None:
+            return len(self.get_joint_names()) > 0
+        return len(self.get_joint_names(obj_id=obj_id)) > 0 or len(self.get_joint_names(obj_id=obj_id, joint_type_query='fixed')) > 1
 
     @functools.lru_cache(maxsize=None)
     def get_joint_properties(self, obj_id=None, include_fixed_floating_joints=False):
@@ -2139,20 +2141,21 @@ class Scene(object):
         Args:
             parent_node (str): Parent node in the scene graph.
             child_node (str): Child node in the scene graph.
-            name (str): Identifier of the joint. Should be of the form <obj_id>/<joint_id>.
+            name (str): Identifier of the joint. Needs to be of the form <obj_id>/<joint_id>.
             type (str): 'revolute', 'prismatic', 'floating', or 'fixed'.
             **q (float, optional): Configuration of the joint. Defaults to 0.0.
             **origin (np.ndarray, optional): Homogenous matrix representing origin of joint. Defaults to self.get_transform(frame_to=child_node, frame_from=parent_node).
             **axis (list[float], optional): Axis of the joint. Defaults to [1, 0, 0].
+            **limit_lower (float, optional): Lower joint limit. Defaults to constanst.DEFAULT_LIMIT_LOWER for revolute and prismatic joints.
+            **limit_upper (float, optional): Upper joint limit. Defaults to constanst.DEFAULT_LIMIT_UPPER for revolute and prismatic joints.
             **limit_velocity (float, optional): Joint velocity limit. Defaults to None.
             **limit_effort (float, optional): Joint effort limit. Defaults to None.
-            **limit_lower (float, optional): Lower joint limit. Defaults to None.
-            **limit_upper (float, optional): Upper joint limit. Defaults to None.
             **stiffness (float, optional): Joint stiffness. Defaults to None.
             **damping (float, optional): Joint damping. Defaults to None.
 
         Raises:
             ValueError: If name already exists.
+            ValueError: If name is not of the form <obj_id>/<joint_id>.
             ValueError: If type is not one of the predefined ones.
             ValueError: If there's no edge in the scene graph between parent_node and child_node.
             ValueError: If there's already a joint in the scene graph between parent_node and child_node.
@@ -2164,17 +2167,25 @@ class Scene(object):
         if type not in ["revolute", "prismatic", "fixed", "floating"]:
             raise ValueError(f"Joint type {type} needs to be one of: revolute, prismatic, floating, fixed.")
 
-        if type != "fixed":
+        if type != "fixed" and type != "floating":
             if "q" not in kwargs:
                 kwargs["q"] = 0.0
             if "origin" not in kwargs:
-                kwargs["origin"] = self.get_transform(frame_to=child_node, frame_from=parent_node)
+                kwargs["origin"] = self.get_transform(node=child_node, frame_from=parent_node)
             if "axis" not in kwargs:
                 kwargs["axis"] = np.array([1.0, 0, 0])
+            if "limit_lower" not in kwargs:
+                kwargs["limit_lower"] = DEFAULT_JOINT_LIMIT_LOWER
+            if "limit_lower" not in kwargs:
+                kwargs["limit_upper"] = DEFAULT_JOINT_LIMIT_UPPER
 
         scene_edge_data = self._scene.graph.transforms.edge_data
         if (parent_node, child_node) not in scene_edge_data:
             raise ValueError(f"No edge between {parent_node} and {child_node} in the scene graph.")
+
+        parent_child_node_obj_ids = [parent_node.split('/')[0], child_node.split('/')[0]]
+        if not '/' in name or not name.split('/')[0] in parent_child_node_obj_ids:
+            raise ValueError(f"Joint name {name} must be of the form <obj_id>/<joint_id>. Given parent and child node, <obj_id> can be {parent_child_node_obj_ids}.")
 
         if (
             EDGE_KEY_METADATA in scene_edge_data[(parent_node, child_node)]
