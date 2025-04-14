@@ -1,0 +1,65 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Eppner
+  given-names: Clemens
+  orcid: "https://orcid.org/0000-0002-5398-4037"
+- family-names: Murali
+  given-names: Adithyavairavan
+- family-names: Garrett
+  given-names: Caelan
+  orcid: "https://orcid.org/0000-0002-6474-1276"
+- family-names: O'Flaherty
+  given-names: Rowland
+- family-names: Hermans
+  given-names: Tucker
+  orcid: "https://orcid.org/0000-0003-2496-2768"
+- family-names: Yang
+  given-names: Wei
+  orcid: "https://orcid.org/0000-0003-3975-2472"
+- family-names: Fox
+  given-names: Dieter
+  orcid: "https://orcid.org/0009-0009-4694-9127"
+contact:
+- family-names: Eppner
+  given-names: Clemens
+  orcid: "https://orcid.org/0000-0002-5398-4037"
+doi: 10.5281/zenodo.14736778
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Eppner
+    given-names: Clemens
+    orcid: "https://orcid.org/0000-0002-5398-4037"
+  - family-names: Murali
+    given-names: Adithyavairavan
+  - family-names: Garrett
+    given-names: Caelan
+    orcid: "https://orcid.org/0000-0002-6474-1276"
+  - family-names: O'Flaherty
+    given-names: Rowland
+  - family-names: Hermans
+    given-names: Tucker
+    orcid: "https://orcid.org/0000-0003-2496-2768"
+  - family-names: Yang
+    given-names: Wei
+    orcid: "https://orcid.org/0000-0003-3975-2472"
+  - family-names: Fox
+    given-names: Dieter
+    orcid: "https://orcid.org/0009-0009-4694-9127"
+  date-published: 2025-01-28
+  doi: 10.21105/joss.07561
+  issn: 2475-9066
+  issue: 105
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 7561
+  title: "scene_synthesizer: A Python Library for Procedural Scene
+    Generation in Robot Manipulation"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.07561"
+  volume: 10
+title: "scene_synthesizer: A Python Library for Procedural Scene
+  Generation in Robot Manipulation"
+

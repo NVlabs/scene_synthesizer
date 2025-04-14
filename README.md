@@ -1,6 +1,6 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/scene-synthesizer)](https://pypi.org/project/scene-synthesizer/)
 [![Static Badge](https://img.shields.io/badge/docs-passing-brightgreen)](https://scene-synthesizer.github.io/)
-[![Static Badge](https://img.shields.io/badge/arXiv-preprint-D12424)](https://drive.google.com/file/d/1fewL5ezXhlICAv_BNqyLe5YjaXAbXH2Y/view?usp=sharing)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07561/status.svg)](https://doi.org/10.21105/joss.07561)
 
 # scene_synthesizer
 
