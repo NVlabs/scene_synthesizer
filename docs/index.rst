@@ -3,7 +3,7 @@ Scene Synthesizer |version| Documentation
 #########################################
 
 A Python package to easily create scenes for robot manipulation tasks.
-=======
+
 .. image:: https://joss.theoj.org/papers/10.21105/joss.07561/status.svg
    :target: https://doi.org/10.21105/joss.07561
 
