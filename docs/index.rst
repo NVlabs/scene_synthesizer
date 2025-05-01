@@ -82,8 +82,6 @@ How Can I Cite This Library?
    }
 
 
-
-Paper PDF: 
 .. image:: https://joss.theoj.org/papers/10.21105/joss.07561/status.svg
    :target: https://doi.org/10.21105/joss.07561
 
