@@ -1444,7 +1444,7 @@ def sample_polygon(polygon, count, factor=1.5, max_iter=10, seed=None):
 
     # get size of bounding box
     bounds = np.reshape(polygon.bounds, (2, 2))
-    extents = bounds.ptp(axis=0)
+    extents = np.ptp(bounds, axis=0)
 
     # how many points to check per loop iteration
     per_loop = int(count * factor)
