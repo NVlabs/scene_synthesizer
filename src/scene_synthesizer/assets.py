@@ -21,10 +21,22 @@ from .trimesh_utils import compute_stable_poses
 
 try:
     # Third Party
-    from pyglet.app import run as pyglet_app_run
+    from pyglet.app import run as _pyglet_app_run
 except BaseException as E:
-    pyglet_app_run = utils.late_bind_exception(E)
+    _pyglet_app_run = utils.late_bind_exception(E)
 
+
+def asset_generator(fnames, **kwargs):
+    """A simple generator that runs through a list of filenames and returns an Asset for each one.
+
+    Args:
+        fnames (list[str]): A list of file names.
+
+    Yields:
+        assets.Asset: An asset.
+    """
+    for fname in fnames:
+        yield Asset(fname=fname, **kwargs)
 
 class Asset(object):
     """The asset base class."""
@@ -239,7 +251,7 @@ class Asset(object):
                 if "layer" in v.metadata and not v.metadata["layer"] in layers:
                     viewer.hide_geometry(node=k)
 
-        pyglet_app_run()
+        _pyglet_app_run()
 
         return viewer
 

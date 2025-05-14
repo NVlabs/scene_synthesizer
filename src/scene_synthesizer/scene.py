@@ -14,7 +14,7 @@ import re
 import uuid
 from collections import OrderedDict
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass as _dataclass
 from typing import Optional
 
 # Third Party
@@ -33,12 +33,12 @@ from .constants import EDGE_KEY_METADATA, DEFAULT_JOINT_LIMIT_LOWER, DEFAULT_JOI
 
 try:
     # Third Party
-    from pyglet.app import run as pyglet_app_run
+    from pyglet.app import run as _pyglet_app_run
 except BaseException as E:
-    pyglet_app_run = utils.late_bind_exception(E)
+    _pyglet_app_run = utils.late_bind_exception(E)
 
 
-@dataclass
+@_dataclass
 class SupportSurface:
     """A class for holding information about a support surface in the scene."""
 
@@ -50,7 +50,7 @@ class SupportSurface:
     covered: Optional[bool] = None
 
 
-@dataclass
+@_dataclass
 class Container:
     """A class for holding information about a volume in the scene."""
 
@@ -58,20 +58,6 @@ class Container:
     node_name: str
     transform: np.ndarray
     support_surface: Optional[SupportSurface] = None
-
-
-def asset_generator(fnames, **kwargs):
-    """A simple generator that runs through a list of filenames and returns an Asset for each one.
-
-    Args:
-        fnames (list[str]): A list of file names.
-
-    Yields:
-        assets.Asset: An asset.
-    """
-    for fname in fnames:
-        yield Asset(fname=fname, **kwargs)
-
 
 class Scene(object):
     """Represents a scene, which is a scene graph, where nodes can have geometry attached and edges are transforms, potentially articulated by joints.
@@ -4245,7 +4231,7 @@ class Scene(object):
                 ):
                     viewer.hide_geometry(node=k)
 
-        pyglet_app_run()
+        _pyglet_app_run()
 
         return viewer
 

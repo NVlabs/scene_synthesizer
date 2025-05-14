@@ -132,6 +132,9 @@ materials = {
         ('vMaterials_2/Ceramic/Ceramic_Tiles_Glazed_Paseo.mdl', 'Ceramic_Tiles_Paseo_White_Worn_Matte', DEFAULT_TEXTURE_SCALE),
         ('vMaterials_2/Ceramic/Ceramic_Tiles_Glazed_Diamond_Offset.mdl', 'Ceramic_Tiles_Offset_Diamond_Antique_White_Dirty', DEFAULT_TEXTURE_SCALE),
     ],
+    'white plastic': [
+        ('vMaterials_2/Plastic/Plastic_Thick_Translucent.mdl', 'Plastic_Thick_Translucent', DEFAULT_TEXTURE_SCALE),
+    ],
 }
 
 # A dictionary mapping scene object/part names to types the general types of objects/parts defined above
@@ -139,16 +142,17 @@ materials = {
 geometry2material = {
     "(.*cabinet.*corpus.*|.*cabinet.*door|.*drawer.*board.*|.*cabinet.*closed.*|/world/kitchen_island/.*)|/world/corner_(1|2|3)": "cabinet",
     "(.*refrigerator.*|.*range_hood.*|.*range.*|.*dishwasher.*)": "appliances",
-    "/world/oven/corpus/heater.*": 'rusted metal',
-    "/world/oven/corpus/top": 'glossy black',
+    "/world/range/corpus/heater.*": 'rusted metal',
+    "/world/range/corpus/top": 'glossy black',
     ".*/corpus/sink": 'sink',
     ".*countertop.*": "countertop",
     ".*handle.*": "handle",
-    ".*window": 'tinted glass',
-    ".*glass": 'glass',
+    "/world/range/.*window": 'tinted glass',
+    "(.*glass|.*_window)": 'glass',
     "/world/plate.*": 'sink',
     "(/world/wall/geometry.*|/world/wall_(x|y|_y|_x)/geometry_0)": 'wall',
     "/world/floor/geometry.*": 'floor',
+    ".*dishwasher.*basket": 'white plastic',
 }
 
 # Generate a random kitchen

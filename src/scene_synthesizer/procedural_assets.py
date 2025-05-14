@@ -8,6 +8,7 @@
 import os
 import copy
 from typing import List
+from functools import partial
 
 # Third Party
 import numpy as np
@@ -3618,6 +3619,39 @@ class RangeAsset(URDFAsset):
             door_shape_args=[None, door_shape_args, None],
         )
 
+        # Replace existing shelf with a wire mesh commonly found in ranges
+        v_element = next((item for item in urdf_model.links[0].visuals if item.name == 'shelf_1_0_0'), None)
+        c_element = next((item for item in urdf_model.links[0].collisions if item.name == 'shelf_1_0_0'), None)
+        
+        # Remember transform to add replacement at same position
+        v_transform = v_element.origin
+        c_transform = c_element.origin
+
+        # Remove existing box - will throw exception if None
+        urdf_model.links[0].visuals.remove(v_element)
+        urdf_model.links[0].collisions.remove(c_element)
+
+        # Create wire mesh 
+        wire_mesh_gap = 0.01
+        wire_mesh_height = 0.01
+        wire_mesh_primitives = BinAsset.create_primitives(
+            width=v_element.geometry.box.size[0] - 2.0 * wire_mesh_gap,
+            depth=v_element.geometry.box.size[1] - 2.0 * wire_mesh_gap,
+            height=wire_mesh_height,
+            thickness=0.005,
+            angle=0.0,
+            wired=True,
+        )
+
+        # Add wire mesh elements to first link at same position as previous one
+        for i, b in enumerate(wire_mesh_primitives):
+            urdf_model.links[0].visuals.append(
+                yourdfpy.Visual(name=f"shelf_1_0_0_{i}", geometry=yourdfpy.Geometry(box=yourdfpy.Box(size=b.extents)), origin=v_transform @ np.array(b.transform))
+            )
+            urdf_model.links[0].collisions.append(
+                yourdfpy.Visual(name=f"shelf_1_0_0_{i}", geometry=yourdfpy.Geometry(box=yourdfpy.Box(size=b.extents)), origin=c_transform @ np.array(b.transform))
+            )
+
         # Add stove plates
         if stove_plate_height > 0 and stove_plate_radius > 0:
             for x, y in zip([0, 1, 0, 1], [0, 0, 1, 1]):
@@ -3691,6 +3725,10 @@ class DishwasherAsset(URDFAsset):
         control_panel_height=0.1,
         foot_panel_height=0.04,
         wall_thickness=0.02,
+        door_thickness=0.05,
+        basket_height=0.15,
+        basket_z_offset=(-0.10, 0.01),
+        basket_wire_mesh_gap=0.05,
         handle_length=0.66,
         handle_thickness=0.05,
         handle_depth=0.04,
@@ -3718,6 +3756,10 @@ class DishwasherAsset(URDFAsset):
             control_panel_height (float, optional): Height of control panel. Defaults to 0.1.
             foot_panel_height (float, optional): Height of base / foot panel. Defaults to 0.04.
             wall_thickness (float, optional): Thickness of outer walls. Defaults to 0.02.
+            door_thickness (float, optional): Thickness of front door. Defaults to 0.05.
+            basket_height (float, optional): Height of each of two internal wire baskets. Defaults to 0.2.
+            basket_z_offset (tuple[float, float], optional): Offset in z direction of top and bottom basket. Defaults to ().
+            basket_wire_mesh_gap (float, optional): How dense the wire basket mesh is. Defaults to 0.05.
             handle_length (float, optional): Length of handle. Defaults to 0.66.
             handle_thickness (float, optional): Thickness of handle. Defaults to 0.05.
             handle_depth (float, optional): Depth of handle. Defaults to 0.04.
@@ -3764,7 +3806,7 @@ class DishwasherAsset(URDFAsset):
             compartment_heights=compartment_heights,
             outer_wall_thickness=wall_thickness,
             inner_wall_thickness=wall_thickness,
-            frontboard_thickness=wall_thickness,
+            frontboard_thickness=door_thickness,
             frontboard_overlap=0.9,
             handle_width=handle_length,
             handle_height=handle_depth,
@@ -3773,6 +3815,33 @@ class DishwasherAsset(URDFAsset):
             handle_shape_args=handle_shape_args,
         )
 
+        # insert two bins
+        basket_gap = 0.01
+        basket_names = ["top_basket", "bottom_basket"]
+        basket_zs = [(1.0 - control_panel_height) * height - 2.0 * wall_thickness - basket_height + basket_z_offset[0], foot_panel_height * height + 1.0 * wall_thickness + door_thickness + basket_z_offset[1]]
+        basket_y = (door_thickness - wall_thickness) / 2.0
+        for basket_name, basket_z in zip(basket_names, basket_zs):
+            basket_top_primitives = BinAsset.create_primitives(
+                width=width - wall_thickness - wall_thickness - 2.0 * basket_gap,
+                depth=depth - wall_thickness - door_thickness - 2.0 * basket_gap,
+                height=basket_height,
+                thickness=0.005,
+                angle=0.0,
+                wired=True,
+                wire_gap=basket_wire_mesh_gap,
+            )
+            urdf_model.links.append(yourdfpy.Link(
+                name=basket_name,
+                visuals=[yourdfpy.Visual(name=f"{basket_name}_{i}", geometry=yourdfpy.Geometry(box=yourdfpy.Box(size=b.extents)), origin=np.array(b.transform)) for i, b in enumerate(basket_top_primitives)],
+                collisions=[yourdfpy.Collision(name=f"{basket_name}_collision_{i}",geometry=yourdfpy.Geometry(box=yourdfpy.Box(size=b.extents)), origin=np.array(b.transform)) for i, b in enumerate(basket_top_primitives)],
+            ))
+            urdf_model.joints.append(yourdfpy.Joint(name=f"corpse_to_{basket_name}", type="prismatic", origin=tra.translation_matrix((0, basket_y, basket_z)), parent="corpus", child=basket_name, axis=np.array((0, -1.0, 0)), limit=yourdfpy.Limit(
+                    effort=1000.0,
+                    velocity=1.0,
+                    lower=0.0,
+                    upper=depth - 0.1,)
+            ))
+        
         self._model = yourdfpy.URDF(
             robot=urdf_model,
             build_scene_graph=True,
@@ -4240,12 +4309,17 @@ class BinAsset(TrimeshSceneAsset):
                  height=0.12,
                  thickness=0.005,
                  angle=0.0,
+                 wired=False,
                  use_primitives=False,
                  **kwargs):
         """A storage bin asset (rectangular bottom and four rectangular sides).
-        Optionally, the sides can be angled.
+        Optionally, the sides can be angled and the surfaces can be wire meshes.
 
         .. image:: /../imgs/bin_asset.png
+            :align: center
+            :width: 250px
+
+        .. image:: /../imgs/bin_asset_2.png
             :align: center
             :width: 250px
 
@@ -4255,11 +4329,15 @@ class BinAsset(TrimeshSceneAsset):
             height (float, optional): Height of storage bin. Defaults to 0.12.
             thickness (float, optional): Thickness of bottom and walls. Defaults to 0.005.
             angle (float, optional): Angle in radians to create slanted side walls. Needs to be in (-pi/2, +pi/2). Positive means outward slope. Defaults to 0.
+            wired (bool, optional): Whether to create a wire basket. Defaults to False.
             use_primitives (bool, optional): Will use five box primitives to construct bin. Note, that angle will be ignored. Defaults to False.
             **kwargs: Arguments will be delegated to constructor of TrimeshAsset.
         """
         fn = BinAsset.create_primitives if use_primitives else BinAsset.create_mesh
         
+        if wired:
+            fn = partial(BinAsset.create_primitives, wired=True)
+
         super().__init__(
             trimesh.Scene(
                 fn(
@@ -4274,12 +4352,15 @@ class BinAsset(TrimeshSceneAsset):
         )
 
     @staticmethod
-    def create_primitives(width, depth, height, thickness, angle=0):
+    def create_primitives(width, depth, height, thickness, angle=0, wired=False, wire_gap=0.05, wire_thickness=0.005):
         if angle != 0:
             raise Warning(f"BinAsset: angle is ignored since use_primitives=True")
         
         if not (angle > -np.pi / 2.0 and angle < np.pi / 2.0):
             raise ValueError(f"angle={angle} must be between -np.pi / 2.0 and np.pi / 2.0 (exclusively).")
+
+        if wired and angle != 0:
+            raise NotImplementedError("BinAsset cannot be angled (angle={angle}) if wired=True.")
 
         outer_hyp = height / np.cos(angle)
         outer_widthdepth = np.sin(angle) * outer_hyp
@@ -4289,14 +4370,74 @@ class BinAsset(TrimeshSceneAsset):
 
         inner_width_bottom = inner_width + 2.0 * thickness * np.sin(angle)
         inner_depth_bottom = inner_depth + 2.0 * thickness * np.sin(angle)
+        
+        primitives = []
+        if wired:
+            wire_x = np.arange(-inner_width_bottom/2.0, inner_width_bottom/2.0, wire_gap)[1:]
+            for i in range(len(wire_x)):
+                # bottom ones
+                primitives.append(trimesh.primitives.Box(
+                    (wire_thickness, inner_depth_bottom, thickness),
+                    transform=tra.translation_matrix((wire_x[i], 0, +thickness / 2.0))
+                    ))
+                # back
+                primitives.append(trimesh.primitives.Box(
+                    (wire_thickness, thickness, height),
+                    transform=tra.translation_matrix((wire_x[i], +depth / 2.0 - thickness / 2.0, height / 2.0))
+                    ))
+                # front
+                primitives.append(trimesh.primitives.Box(
+                    (wire_thickness, thickness, height),
+                    transform=tra.translation_matrix((wire_x[i], -depth / 2.0 + thickness / 2.0, height / 2.0))
+                    ))
+            wire_y = np.arange(-inner_depth_bottom/2.0, inner_depth_bottom/2.0, wire_gap)[1:]
+            for i in range(len(wire_y)):
+                # bottom ones
+                primitives.append(trimesh.primitives.Box(
+                    (inner_width_bottom, wire_thickness, thickness),
+                    transform=tra.translation_matrix((0, wire_y[i], +thickness / 2.0))
+                    ))
+                # right
+                primitives.append(trimesh.primitives.Box(
+                    (thickness, wire_thickness, height),
+                    transform=tra.translation_matrix((+width / 2.0 - thickness / 2.0, wire_y[i], height / 2.0))
+                    ))
+                # left
+                primitives.append(trimesh.primitives.Box(
+                    (thickness, wire_thickness, height),
+                    transform=tra.translation_matrix((-width / 2.0 + thickness / 2.0, wire_y[i], height / 2.0))
+                    ))
+            wire_z = np.arange(height, 0, -wire_gap)
+            for i in range(len(wire_z)):
+                # right
+                primitives.append(trimesh.primitives.Box(
+                    (thickness, inner_depth_bottom + 2.0 * thickness, wire_thickness),
+                    transform=tra.translation_matrix((+width / 2.0 - thickness / 2.0, 0, wire_z[i]))
+                    ))
+                # left
+                primitives.append(trimesh.primitives.Box(
+                    (thickness, inner_depth_bottom + 2.0 * thickness, wire_thickness),
+                    transform=tra.translation_matrix((-width / 2.0 + thickness / 2.0, 0, wire_z[i]))
+                    ))
+                # back
+                primitives.append(trimesh.primitives.Box(
+                    (inner_width_bottom, thickness, wire_thickness),
+                    transform=tra.translation_matrix((0, +depth / 2.0 - thickness / 2.0, wire_z[i]))
+                    ))
+                # front
+                primitives.append(trimesh.primitives.Box(
+                    (inner_width_bottom, thickness, wire_thickness),
+                    transform=tra.translation_matrix((0, -depth / 2.0 + thickness / 2.0, wire_z[i]))
+                    ))
+        else:
+            bin_floor = trimesh.primitives.Box((inner_width_bottom, inner_depth_bottom, thickness), transform=tra.translation_matrix((0, 0, +thickness / 2.0)))
+            bin_wall_north = trimesh.primitives.Box((inner_width_bottom, thickness, height), transform=tra.translation_matrix((0, +depth / 2.0 - thickness / 2.0, height / 2.0)))
+            bin_wall_south = trimesh.primitives.Box((inner_width_bottom, thickness, height), transform=tra.translation_matrix((0, -depth / 2.0 + thickness / 2.0, height / 2.0)))
+            bin_wall_west = trimesh.primitives.Box((thickness, inner_depth_bottom + 2.0 * thickness, height), transform=tra.translation_matrix((+width / 2.0 - thickness / 2.0, 0, height / 2.0)))
+            bin_wall_east = trimesh.primitives.Box((thickness, inner_depth_bottom + 2.0 * thickness, height), transform=tra.translation_matrix((-width / 2.0 + thickness / 2.0, 0, height / 2.0)))
+            primitives = (bin_floor, bin_wall_north, bin_wall_south, bin_wall_west, bin_wall_east)
 
-        bin_floor = trimesh.primitives.Box((inner_width_bottom, inner_depth_bottom, thickness), transform=tra.translation_matrix((0, 0, +thickness / 2.0)))
-        bin_wall_north = trimesh.primitives.Box((inner_width_bottom, thickness, height), transform=tra.translation_matrix((0, +depth / 2.0 - thickness / 2.0, height / 2.0)))
-        bin_wall_south = trimesh.primitives.Box((inner_width_bottom, thickness, height), transform=tra.translation_matrix((0, -depth / 2.0 + thickness / 2.0, height / 2.0)))
-        bin_wall_west = trimesh.primitives.Box((thickness, inner_depth_bottom + 2.0 * thickness, height), transform=tra.translation_matrix((+width / 2.0 - thickness / 2.0, 0, height / 2.0)))
-        bin_wall_east = trimesh.primitives.Box((thickness, inner_depth_bottom + 2.0 * thickness, height), transform=tra.translation_matrix((-width / 2.0 + thickness / 2.0, 0, height / 2.0)))
-
-        return (bin_floor, bin_wall_north, bin_wall_south, bin_wall_west, bin_wall_east)
+        return primitives
 
     @staticmethod
     def create_mesh(width, depth, height, thickness, angle=0):

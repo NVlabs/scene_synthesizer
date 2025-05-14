@@ -579,9 +579,16 @@ def add_joint(
             drive_api = UsdPhysics.DriveAPI(joint_prim, 'linear')
 
         if damping is not None:
-            drive_api.CreateDampingAttr().Set(damping)
+            if isinstance(damping, float):
+                drive_api.CreateDampingAttr().Set(damping)
+            else:
+                warnings.warn(f"Damping is not of type float: {damping}")
         if stiffness is not None:
-            drive_api.CreateStiffnessAttr().Set(stiffness)
+            if isinstance(damping, float):
+                drive_api.CreateStiffnessAttr().Set(stiffness)
+            else:
+                warnings.warn(f"Stiffness is not of type float: {damping}")
+
 
     add_physics_schemas(stage=stage, scene_path=scene_path, physx_joint_api=physx_joint_api)
 
