@@ -4,6 +4,8 @@
 
 # scene_synthesizer
 
+![Banner](imgs/scene_synth_banner.png)
+
 A python package to generate manipulation scenes.
 Check the [documentation](https://scene-synthesizer.github.io/) page for detailed installation instructions, API, and examples.
 
