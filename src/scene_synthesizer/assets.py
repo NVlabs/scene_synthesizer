@@ -1027,6 +1027,7 @@ class USDAsset(Asset):
         Args:
             fname (str): USD file name.
             **ignore_articulation (bool, optional): Will ignore any joints. Defaults to False.
+            **ignore_visibility (bool, optional): Will also load meshes/primitives that are invisible. Defaults to False.
             **default_joint_limit_upper (float, optional): Defaults to scene_synthesizer.constants.DEFAULT_JOINT_LIMIT_UPPER.
             **default_joint_limit_lower (float, optional): Defaults to scene_synthesizer.constants.DEFAULT_JOINT_LIMIT_LOWER.
             **default_joint_limit_velocity (float, optional): Defaults to scene_synthesizer.constants.DEFAULT_JOINT_LIMIT_VELOCITY.
@@ -1070,6 +1071,7 @@ class USDAsset(Asset):
         self._configuration = None
 
         self._ignore_articulation = kwargs.get("ignore_articulation", False)
+        self._ignore_visibility = kwargs.get("ignore_visibility", False)
 
         if "configuration" in kwargs:
             if isinstance(kwargs["configuration"], str):
@@ -1134,6 +1136,7 @@ class USDAsset(Asset):
 
                 joints[(body_0, body_1)] = joint_prim
 
+                # Note: Joint constraints are undirected, and some USDs give them in different order
                 joints[(body_1, body_0)] = "reversed"
 
             num_actuated_joints = len(
@@ -1155,6 +1158,8 @@ class USDAsset(Asset):
         xform_paths = sorted(usd_import.get_scene_paths(stage=stage, prim_types=["Xform", "Scope"]))
         log.debug("All xpaths found:\n" + "\n".join(map(str, xform_paths)))
 
+        xform_paths_failure_cnt = {xform_path: 0 for xform_path in xform_paths}
+
         failure_cnt = 0
         q_index = 0
         q_final = []
@@ -1164,8 +1169,7 @@ class USDAsset(Asset):
 
             log.debug(f"Working on {xform_path}")
 
-            # check if connection to parent is defined as joint
-            # Note: Joint constraints are undirected, and some USDs give them in different order
+            # we need to check whether the connection to the parent is also part of a joint constraint
             parent_path = xform_prim.GetParent().GetPath()
             log.debug(
                 f"Parent: {parent_path}  (node name: {_usd_prim_path_to_node_name(parent_path)})"
@@ -1173,17 +1177,24 @@ class USDAsset(Asset):
 
             # Child of root path can be added immediately
             if parent_path.pathString != "/":
-                for x, y in joints:
-                    if y == xform_path:
-                        # since they could be connected via a joint it, we will first check whether the other body is part of the scene
-                        log.debug(f"Found relevant joint constraint: {x} <-> {y}")
-                        parent_path = x
+                if xform_paths_failure_cnt[xform_path] == 0:
+                    # check if connection to parent is defined as joint
+                    # if yes, overwrite parent_path
+                    # also make sure the parent is already part of the graph built so far
+                    for x, y in joints:
+                        if y == xform_path:
+                            # since they could be connected via a joint it, we will first check whether the other body is part of the scene
+                            log.debug(f"Found relevant joint constraint: {x} <-> {y}")
+                            parent_path = x
 
-                        if _usd_prim_path_to_node_name(x) in list(s.graph.nodes) + [
-                            s.graph.base_frame
-                        ]:
-                            log.debug(f"Parent (via joint constraint) is in the graph.")
-                            break
+                            if _usd_prim_path_to_node_name(x) in list(s.graph.nodes) + [
+                                s.graph.base_frame
+                            ]:
+                                log.debug(f"Parent (via joint constraint) is in the graph.")
+                                break
+                else:
+                    # Use the normal constraint
+                    pass
 
                 graph_node_list = list(s.graph.nodes) + [s.graph.base_frame]
                 if _usd_prim_path_to_node_name(parent_path) not in graph_node_list:
@@ -1200,6 +1211,8 @@ class USDAsset(Asset):
                         )
                     else:
                         xform_paths.append(xform_path)
+                        xform_paths_failure_cnt[xform_path] += 1
+
                         log.debug(
                             f"Parent {parent_path} (node name:"
                             f" {_usd_prim_path_to_node_name(parent_path)}) not in scene - next"
@@ -1214,6 +1227,8 @@ class USDAsset(Asset):
 
             # reset failure counter
             failure_cnt = 0
+            for k in xform_paths_failure_cnt:
+                xform_paths_failure_cnt[k] = 0
 
             node_name = _usd_prim_path_to_node_name(xform_path)
             parent_node_name = _usd_prim_path_to_node_name(parent_path)
@@ -1221,6 +1236,7 @@ class USDAsset(Asset):
             matrix = usd_import.get_pose(xform_prim)
             extras = None
 
+            # check if connection to parent is defined as joint
             if (parent_path, xform_path) in joints:
                 # if it's a joint, overwrite transformation
                 joint_prim = joints[parent_path, xform_path]
@@ -1376,7 +1392,7 @@ class USDAsset(Asset):
         for mesh_path in mesh_paths:
             if mesh_path.pathString in self._ignore_prim_paths:
                 continue
-
+            
             if not use_collision_geometry and mesh_path.pathString.endswith("collisions"):
                 log.info(
                     f"{mesh_path.pathString} will be skipped since it contains `collisions` and"
@@ -1385,6 +1401,11 @@ class USDAsset(Asset):
                 continue
 
             mesh_prim = self._stage.GetPrimAtPath(mesh_path)
+
+            if not self._ignore_visibility and not usd_import.is_visible(mesh_prim):
+                log.info(f"{mesh_path.pathString} is not visible and will be skipped.")
+                continue
+
             usd_data = usd_import.import_mesh(
                 stage=stage,
                 scene_path=mesh_prim.GetPath(),
@@ -1457,6 +1478,11 @@ class USDAsset(Asset):
                 continue
 
             primitive_prim = self._stage.GetPrimAtPath(primitive_path)
+
+            if not self._ignore_visibility and not usd_import.is_visible(primitive_prim):
+                log.info(f"{primitive_path.pathString} is not visible and will be skipped.")
+                continue
+
             usd_data = usd_import.import_primitive(stage=stage, scene_path=primitive_prim.GetPath())
 
             if usd_data["type"] == "Cube":

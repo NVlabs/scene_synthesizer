@@ -627,6 +627,25 @@ def get_root(stage):
     """
     return stage.GetPseudoRoot().GetPath()
 
+def is_visible(prim):
+    """Returns whether this prim is visible.
+
+    Args:
+        prim (pxr.Usd.Prim): Prim to check for visibility.
+
+    Raises:
+        ValueError: Prim doesn't support visibility.
+
+    Returns:
+        bool: Whether this Prim is visible.
+    """
+    if prim and UsdGeom.Imageable(prim):
+        imageable = UsdGeom.Imageable(prim)
+        is_visible = imageable.ComputeVisibility() != UsdGeom.Tokens.invisible
+        return is_visible
+    
+    raise ValueError(f"Prim doesn't support visibility")
+
 
 def traverse_instanced_children(prim):
     """Get every Prim child beneath `prim`, even if `prim` is instanced.
