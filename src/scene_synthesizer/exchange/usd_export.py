@@ -39,7 +39,7 @@ from PIL import Image
 
 try:
     # Third Party
-    from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdPhysics, UsdShade, Vt
+    from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdPhysics, UsdShade, Vt, UsdSemantics
 except ImportError:
     warnings.warn("Warning: module pxr not found", ImportWarning)
 
@@ -353,6 +353,20 @@ def _set_transform_prim(prim, transform, scale=None):
             scale_attr.Set(Gf.Vec3f(scale, scale, scale))
 
 
+def add_semantics_labels_api(stage, scene_path, key, values):
+    """Apply SemanticsLabelsAPI to prim.
+
+    Args:
+        stage (Usd.Stage): USD stage.
+        scene_path (str): Path to prim to apply API to.
+        key (str): Attribute name is "semantics:labels:<key>". Could be e.g. "category".
+        values (list[str]): A list of strings.
+    """
+    prim = stage.GetPrimAtPath(scene_path)
+    prim.ApplyAPI(UsdSemantics.LabelsAPI, key)
+    attr = prim.GetAttribute(f"semantics:labels:{key}")
+    attr.Set(values)
+
 def add_sphere_light(
     stage,
     scene_path,
@@ -497,6 +511,31 @@ def add_disk_light(
 
     if transform is not None:
         _set_transform_prim(prim=disk_light, transform=transform)
+
+def add_dome_light(
+        stage,
+        scene_path,
+        texture_file,
+        intensity=1000.0,
+        **kwargs,
+    ):
+    """Add a UsdLux.DomeLight to the scene.
+
+    Args:
+        stage (Usd.Stage): USD stage.
+        scene_path (str): Path of the light prim.
+        texture_file (str): Path to texture file.
+    """
+
+    dome_light = UsdLux.DomeLight.Define(stage, scene_path)
+    prim = dome_light.GetPrim()
+
+    dome_light.CreateTextureFileAttr(texture_file)
+
+    dome_light.CreateIntensityAttr(intensity)
+    prim.CreateAttribute(
+        "intensity", Sdf.ValueTypeNames.Float, custom=False
+    ).Set(intensity)
 
 def add_primitive(
     stage,

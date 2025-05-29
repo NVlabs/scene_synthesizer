@@ -1,12 +1,5 @@
-- name: 'PartNet Mobility'
-  parser: PartNetMobility
-  root_dir: 
-  file_globber: 'dataset/*/mobility.urdf'
-- name: 'ModelNet40 auto-aligned watertight'
-  parser: Dataset
-  root_dir: 
-  file_globber: "meshes/*/*/simplified.obj"
-- name: 'ShapeNetSem watertight'
-  parser: Dataset
-  root_dir: 
-  file_globber: "meshes/*/*.obj"
+# EXAMPLE
+# - name: '<DATASET NAME>'
+#  parser: PartNetMobility|Dataset
+#  root_dir: 
+#  file_globber: 'dataset/*/mobility.urdf'

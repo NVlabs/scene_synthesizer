@@ -29,6 +29,7 @@ def export_usd(
     meters_per_unit=1.0,
     kilograms_per_unit=1.0,
     write_attribute_attached_state=False,
+    write_semantic_labels_api=True,
 ):
     """Export scene to USD file or return USD data.
 
@@ -48,6 +49,7 @@ def export_usd(
         meters_per_unit (float, optional): Meters per unit. Defaults to 1.0.
         kilograms_per_unit (float, optional): Kilograms per unit. Defaults to 1.0.
         write_attribute_attached_state (bool, optional): Will write attribute 'AttachedState' for objects whose parent is not the world. Defaults to False.
+        write_semantic_labels_api (bool, optional): Will write USDs SemanticsLabelsAPI based on scene's metadata 'semantic_labels'. Defaults to True.
 
     Returns:
         Usd.Stage (optional): If fname is None, will return the USD stage (created in memory).
@@ -149,6 +151,12 @@ def export_usd(
                         stage=stage,
                         scene_path=f"/world/{light_name}",
                         transform=scene.get_transform(light_name),
+                        **light,
+                    )
+                elif light['type'] == 'DomeLight':
+                    usd_export.add_dome_light(
+                        stage=stage,
+                        scene_path=f"/world/{light_name}",
                         **light,
                     )
             elif isinstance(light, trimesh.scene.lighting.PointLight):
@@ -862,6 +870,23 @@ def export_usd(
                     scenegraph_to_usd_primpath[roots[0]] for roots in object_link_roots
                 ],
             )
+        
+    # write USD semantic labels
+    if write_semantic_labels_api:
+        for node in scene.semantic_labels:
+            obj_id = node.split('/')[0]
+            
+            if obj_id in referenced_stage_fnames and obj_id not in referenced_stages:
+                continue
+            
+            current_stage = stage if not separate_assets else referenced_stages[obj_id]
+
+            if node not in scenegraph_to_usd_primpath:
+                raise ValueError(f"Error when trying to find {node} in scene graph for applying semantic_labels. Either remove labels or use write_semantic_labels_api=False.")
+            prim_path = scenegraph_to_usd_primpath[node]
+            for key, values in scene.semantic_labels[node].items():
+                usd_export.add_semantics_labels_api(stage=current_stage, scene_path=prim_path, key=key, values=values)
+
 
     # fill main stage if separate assets are supposed to be exported
     # or if some assets are supposed to be not written

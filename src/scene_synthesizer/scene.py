@@ -107,6 +107,7 @@ class Scene(object):
             "parts": {},
             "object_nodes": {},
             "object_geometry_nodes": {},
+            "semantic_labels": {},
         }
         for k, v in initial_values.items():
             if k not in self._scene.metadata:
@@ -121,6 +122,10 @@ class Scene(object):
             dict: Metadata of the scene.
         """
         return self._scene.metadata
+
+    @property
+    def semantic_labels(self):
+        return self._scene.metadata['semantic_labels']
 
     @property
     def graph(self):
@@ -666,6 +671,9 @@ class Scene(object):
         
         # remove nodes
         [self._scene.graph.transforms.remove_node(node_name) for node_name in set(remove_nodes)]
+
+        # remove semantic labels from metadata
+        [self._scene.metadata['semantic_labels'].pop(node_name, None) for node_name in set(remove_nodes)]
         
         # remove unreferenced geometry
         [self.geometry.pop(geom_name, None) for geom_name in set(remove_geometries) if geom_name not in self.graph.geometry_nodes.keys()]
@@ -751,6 +759,7 @@ class Scene(object):
         utils.invalidate_scenegraph_cache(self._scene)
 
         for n in deleted_nodes:
+            self.metadata["semantic_labels"].pop(n, None)
             for k in self.metadata["object_nodes"]:
                 if n in self.metadata["object_nodes"][k]:
                     self.metadata["object_nodes"][k].remove(n)
@@ -833,6 +842,10 @@ class Scene(object):
                     self.metadata["object_nodes"][obj_id] = [
                         n for n in obj_node_names if n != old_name
                     ] + [new_name]
+            
+            if old_name in self.metadata["semantic_labels"]:
+                old_values = self.metadata["semantic_labels"].pop(old_name)
+                self.metadata["semantic_labels"][new_name] = old_values
 
             # 'containers'
             # 'parts'
