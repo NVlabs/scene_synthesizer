@@ -3714,6 +3714,89 @@ class RangeAsset(URDFAsset):
         return oven
 
 
+class DishRackAsset(TrimeshSceneAsset):
+    
+    def __init__(
+        self,
+        width=0.5,
+        depth=0.7,
+        height=0.16,
+        thickness=0.005,
+        wire_gap=0.05,
+        plate_holders=True,
+        plate_holders_every_nth_wire=1,
+        plate_holders_height=None,
+        plate_holders_width=None,
+        plate_holders_angle=0.0,
+        leg_height=0.01,
+        **kwargs,
+    ):
+        """A dish rack asset.
+
+        .. image:: /../imgs/dish_rack_asset.png
+            :align: center
+            :width: 250px
+
+        Args:
+            width (float, optional): Width of the dish rack. Defaults to 0.5.
+            depth (float, optional): Depth of the dish rack. Defaults to 0.7.
+            height (float, optional): Height of the dish rack. Defaults to 0.16.
+            thickness (float, optional): Thickness of wires. Defaults to 0.005.
+            wire_gap (float, optional): Gap between wires. Defaults to 0.05.
+            plate_holders (bool, optional): Whether the dish rack has plate holders. Defaults to False.
+            plate_holders_every_nth_wire (int, optional): How many plate holders, i.e., every nth wire. Defaults to 1.
+            plate_holders_height (float, optional): Height of the plate holders. None means 0.3 of the dish rack width. Defaults to None.
+            plate_holders_width (float, optional): Width of the plate holders. None means half of the dish rack height. Defaults to None.
+            plate_holders_angle (float, optional): Angle of the side of the plate holders. Defaults to 0.
+            leg_height (float, optional): Height of the cylindrical legs. Defaults to 0.01.
+        """
+        basket_primitives = BinAsset.create_primitives(
+            width=width,
+            depth=depth,
+            height=height-leg_height,
+            thickness=thickness,
+            angle=0.0,
+            wired=True,
+            wire_gap=wire_gap,
+            plate_holders=plate_holders,
+            plate_holders_every_nth_wire=plate_holders_every_nth_wire,
+            plate_holders_height=plate_holders_height,
+            plate_holders_width=plate_holders_width,
+            plate_holders_angle=plate_holders_angle,
+        )
+        
+        # add four legs
+        leg_primitives = []
+        inner_width = width - 2.0 * thickness
+        inner_depth = depth - 2.0 * thickness
+        wire_x = np.arange(-inner_width/2.0, inner_width/2.0, wire_gap)[1:]
+        wire_y = np.arange(-inner_depth/2.0, inner_depth/2.0, wire_gap)[1:]
+        basket_primitives.append(trimesh.primitives.Cylinder(radius=2.0*thickness, height=leg_height, transform=tra.translation_matrix((wire_x[1], wire_y[1], -leg_height / 2.0))))
+        basket_primitives.append(trimesh.primitives.Cylinder(radius=2.0*thickness, height=leg_height, transform=tra.translation_matrix((wire_x[1], wire_y[-2], -leg_height / 2.0))))
+        basket_primitives.append(trimesh.primitives.Cylinder(radius=2.0*thickness, height=leg_height, transform=tra.translation_matrix((wire_x[-2], wire_y[-2], -leg_height / 2.0))))
+        basket_primitives.append(trimesh.primitives.Cylinder(radius=2.0*thickness, height=leg_height, transform=tra.translation_matrix((wire_x[-2], wire_y[1], -leg_height / 2.0))))
+
+        scene = trimesh.Scene()
+        for i, geometry in enumerate(basket_primitives):
+            name = f"dish_rack_wire_{i}"
+            scene.add_geometry(
+                geometry=geometry,
+                geom_name=name,
+                node_name=name,
+            )
+        
+        for i, geometry in enumerate(leg_primitives):
+            name = f"dish_rack_leg_{i}"
+            scene.add_geometry(
+                geometry=geometry,
+                geom_name=name,
+                node_name=name,
+            )
+
+        super().__init__(scene=scene, **kwargs)
+
+
+
 class DishwasherAsset(URDFAsset):
     """A dishwasher asset."""
 
@@ -4352,10 +4435,16 @@ class BinAsset(TrimeshSceneAsset):
         )
 
     @staticmethod
-    def create_primitives(width, depth, height, thickness, angle=0, wired=False, wire_gap=0.05, wire_thickness=0.005):
+    def create_primitives(width, depth, height, thickness, angle=0, wired=False, wire_gap=0.05, wire_thickness=0.005, plate_holders=False, plate_holders_every_nth_wire=1, plate_holders_height=None, plate_holders_width=None, plate_holders_angle=0):
         if angle != 0:
             raise Warning(f"BinAsset: angle is ignored since use_primitives=True")
         
+        if not wired and plate_holders:
+            raise Warning("BinAsset: Cannot create plate_holders=True if wired=False")
+
+        if not (plate_holders_angle >= 0 and plate_holders_angle <= np.pi / 2.0):
+            raise ValueError(f"plate_holders_angle={plate_holders_angle} must be between 0 and np.pi / 2.0.")
+
         if not (angle > -np.pi / 2.0 and angle < np.pi / 2.0):
             raise ValueError(f"angle={angle} must be between -np.pi / 2.0 and np.pi / 2.0 (exclusively).")
 
@@ -4363,7 +4452,6 @@ class BinAsset(TrimeshSceneAsset):
             raise NotImplementedError("BinAsset cannot be angled (angle={angle}) if wired=True.")
 
         outer_hyp = height / np.cos(angle)
-        outer_widthdepth = np.sin(angle) * outer_hyp
 
         inner_width = width - 2.0 * thickness
         inner_depth = depth - 2.0 * thickness
@@ -4429,6 +4517,52 @@ class BinAsset(TrimeshSceneAsset):
                     (inner_width_bottom, thickness, wire_thickness),
                     transform=tra.translation_matrix((0, -depth / 2.0 + thickness / 2.0, wire_z[i]))
                     ))
+            
+            if plate_holders:
+                # add structure for plate holder
+                if plate_holders_width is None:
+                    plate_holders_width = 0.3 * width
+                if plate_holders_height is None:
+                    plate_holders_height = 0.5 * height
+                
+                if plate_holders_angle > 0:
+                    plate_holders_slope_width = plate_holders_height / np.tan(plate_holders_angle)
+                else:
+                    plate_holders_slope_width = 0
+                
+                wire_y = np.arange(-inner_depth_bottom/2.0, inner_depth_bottom/2.0, wire_gap)[1:]
+                for i in range(len(wire_y)):
+                    if i % plate_holders_every_nth_wire != 0:
+                        continue
+
+                    # add horizontal bar
+                    primitives.append(
+                        trimesh.primitives.Box(
+                            (plate_holders_width, thickness, thickness),
+                            transform=tra.translation_matrix((0, wire_y[i], plate_holders_height)),
+                        )
+                    )
+
+                    # add vertical prong
+                    length = plate_holders_height
+                    if plate_holders_slope_width > 0:
+                        length = np.sqrt(plate_holders_height**2 + plate_holders_slope_width**2)
+                    else:
+                        length = plate_holders_height
+                    
+                    primitives.append(
+                        trimesh.primitives.Box(
+                            (length, thickness, thickness),
+                            transform=tra.translation_matrix((-plate_holders_width/2.0 - plate_holders_slope_width/2.0, wire_y[i], plate_holders_height / 2.0)) @ tra.rotation_matrix(angle=plate_holders_angle + np.pi/2.0, direction=(0, -1, 0)),
+                        )
+                    )
+
+                    primitives.append(
+                        trimesh.primitives.Box(
+                            (length, thickness, thickness),
+                            transform=tra.translation_matrix((plate_holders_width/2.0 + plate_holders_slope_width/2.0, wire_y[i], plate_holders_height / 2.0)) @ tra.rotation_matrix(angle=plate_holders_angle + np.pi/2.0, direction=(0, 1, 0)),
+                        )
+                    )
         else:
             bin_floor = trimesh.primitives.Box((inner_width_bottom, inner_depth_bottom, thickness), transform=tra.translation_matrix((0, 0, +thickness / 2.0)))
             bin_wall_north = trimesh.primitives.Box((inner_width_bottom, thickness, height), transform=tra.translation_matrix((0, +depth / 2.0 - thickness / 2.0, height / 2.0)))
