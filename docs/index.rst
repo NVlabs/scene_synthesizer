@@ -49,6 +49,10 @@ A Python package to easily create scenes for robot manipulation tasks.
    :maxdepth: 1
    :caption: Examples
 
+   examples/label_surfaces.rst
+   examples/label_container.rst
+   examples/stable_poses.rst
+   examples/use_dataset.rst
    examples/add_mdl_materials.rst
    examples/isaacsim.rst
    examples/isaaclab_rl.rst

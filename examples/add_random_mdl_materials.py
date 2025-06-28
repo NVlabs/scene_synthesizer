@@ -140,7 +140,7 @@ materials = {
 # A dictionary mapping scene object/part names to types the general types of objects/parts defined above
 # The keys are regular expressions of prim_paths in the USD
 geometry2material = {
-    "(.*cabinet.*corpus.*|.*cabinet.*door|.*drawer.*board.*|.*cabinet.*closed.*|/world/kitchen_island/.*)|/world/corner_(1|2|3)": "cabinet",
+    "(.*cabinet.*corpus.*|.*cabinet.*door|.*drawer.*board.*|.*cabinet.*closed.*|/world/kitchen_island/.*)|/world/corner.*": "cabinet",
     "(.*refrigerator.*|.*range_hood.*|.*range.*|.*dishwasher.*)": "appliances",
     "/world/range/corpus/heater.*": 'rusted metal',
     "/world/range/corpus/top": 'glossy black',

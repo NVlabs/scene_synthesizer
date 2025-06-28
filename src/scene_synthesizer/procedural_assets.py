@@ -3812,6 +3812,11 @@ class DishwasherAsset(URDFAsset):
         basket_height=0.15,
         basket_z_offset=(-0.10, 0.01),
         basket_wire_mesh_gap=0.05,
+        basket_plate_holders=False,
+        basket_plate_holders_every_nth_wire=1,
+        basket_plate_holders_height=None,
+        basket_plate_holders_width=None,
+        basket_plate_holders_angle=0,
         handle_length=0.66,
         handle_thickness=0.05,
         handle_depth=0.04,
@@ -3843,6 +3848,11 @@ class DishwasherAsset(URDFAsset):
             basket_height (float, optional): Height of each of two internal wire baskets. Defaults to 0.2.
             basket_z_offset (tuple[float, float], optional): Offset in z direction of top and bottom basket. Defaults to ().
             basket_wire_mesh_gap (float, optional): How dense the wire basket mesh is. Defaults to 0.05.
+            basket_plate_holders (bool, optional): Whether the dish rack has plate holders. Defaults to False.
+            basket_plate_holders_every_nth_wire (int, optional): How many plate holders, i.e., every nth wire. Defaults to 1.
+            basket_plate_holders_height (float, optional): Height of the plate holders. None means 0.3 of the dish rack width. Defaults to None.
+            basket_plate_holders_width (float, optional): Width of the plate holders. None means half of the dish rack height. Defaults to None.
+            basket_plate_holders_angle (float, optional): Angle of the side of the plate holders. Defaults to 0.
             handle_length (float, optional): Length of handle. Defaults to 0.66.
             handle_thickness (float, optional): Thickness of handle. Defaults to 0.05.
             handle_depth (float, optional): Depth of handle. Defaults to 0.04.
@@ -3912,6 +3922,11 @@ class DishwasherAsset(URDFAsset):
                 angle=0.0,
                 wired=True,
                 wire_gap=basket_wire_mesh_gap,
+                plate_holders=basket_plate_holders,
+                plate_holders_every_nth_wire=basket_plate_holders_every_nth_wire,
+                plate_holders_height=basket_plate_holders_height,
+                plate_holders_width=basket_plate_holders_width,
+                plate_holders_angle=basket_plate_holders_angle,
             )
             urdf_model.links.append(yourdfpy.Link(
                 name=basket_name,

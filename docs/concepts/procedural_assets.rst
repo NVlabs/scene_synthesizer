@@ -13,7 +13,7 @@ Furniture and Appliance Assets
 ------------------------------
 
 .. automodule:: scene_synthesizer.procedural_assets
-   :members: BaseCabinetAsset,BinAsset,BoxWithHoleAsset,BowlAsset,CNCMachineAsset,CabinetAsset,CabinetDoorAsset,CubbyShelfAsset,DishwasherAsset,GlassAsset,HandleAsset,KitchenIslandAsset,KnobAsset,MicrowaveAsset,MugAsset,RangeAsset,PlateAsset,RangeHoodAsset,RecursivelyPartitionedCabinetAsset,RefrigeratorAsset,ShelfAsset,SinkCabinetAsset,TableAsset,WallCabinetAsset
+   :members: BaseCabinetAsset,BinAsset,BoxWithHoleAsset,BowlAsset,CNCMachineAsset,CabinetAsset,CabinetDoorAsset,CubbyShelfAsset,DishRackAsset,DishwasherAsset,GlassAsset,HandleAsset,KitchenIslandAsset,KnobAsset,MicrowaveAsset,MugAsset,RangeAsset,PlateAsset,RangeHoodAsset,RecursivelyPartitionedCabinetAsset,RefrigeratorAsset,ShelfAsset,SinkCabinetAsset,TableAsset,WallCabinetAsset
    :member-order: alphabetical
    :noindex:
 

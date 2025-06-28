@@ -2019,6 +2019,13 @@ class TrimeshSceneAsset(Asset):
 
 class LPrismAsset(TrimeshSceneAsset):
     def __init__(self, extents, recess, **kwargs):
+        """An Asset in the shape of an L based on box primitives.
+
+        Args:
+            extents (list[float]): 3D extents of the bounding box.
+            recess (float): Size of the recess in -x and -y direction.
+            **kwargs: See TrimeshSceneAsset() constructor.
+        """
         if recess == 0.:
             scene = trimesh.Scene([
                 trimesh.primitives.Box(extents=extents)
